@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TUTOR
+  STUDENT
+}
+
+model User {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  email                String                @unique
+  password             String
+   role                  Role                @default(STUDENT)
+  firstLogin           Boolean               @default(true) 
+
+  answers              Answer[]
+  certificatesIssued   Certificate[]         @relation("CertificateIssuer")
+  certificatesReceived Certificate[]         @relation("CertificateRecipient")
+  certificateTemplates CertificateTemplate[] @relation("TemplateCreator")
+  createdCourses       Course[]              @relation("CourseCreator")
+  tutorCourses         Course[]              @relation("CourseTutor")
+  documentProgress     DocumentProgress[]
+  Enrollment           Enrollment[]
+  quizAttempts         QuizAttempt[]
+  reports              ReportExport[]
+  gradedSubmissions    Submission[]          @relation("SubmissionGrader")
+  submissions          Submission[]          @relation("StudentSubmissions")
+  tutorApplications    TutorApplication[]    @relation("TutorApplicationApplicant")
+  tutorProfile         TutorProfile?
+  videoProgress        VideoProgress[]
+}
+
+
+model Institution {
+  id           Int           @id @default(autoincrement())
+  name         String
+  govtSyncLogs GovtSyncLog[]
+}
+
+model Course {
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String
+  createdById  Int
+  tutorId      Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  certificates Certificate[]
+  createdBy    User          @relation("CourseCreator", fields: [createdById], references: [id])
+  tutor        User?         @relation("CourseTutor", fields: [tutorId], references: [id])
+  enrollments  Enrollment[]
+  modules      Module[]
+  submissions  Submission[]
+}
+
+model Module {
+  id               Int                @id @default(autoincrement())
+  title            String
+  content          String
+  courseId         Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  DocumentProgress DocumentProgress[]
+  course           Course             @relation(fields: [courseId], references: [id])
+  quizzes          Quiz[]
+  VideoProgress    VideoProgress[]
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Quiz {
+  id        Int           @id @default(autoincrement())
+  title     String
+  moduleId  Int
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  questions Question[]
+  module    Module        @relation(fields: [moduleId], references: [id])
+  attempts  QuizAttempt[]
+}
+
+model Question {
+  id        Int      @id @default(autoincrement())
+  text      String
+  quizId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers   Answer[]
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+}
+
+model Answer {
+  id              Int      @id @default(autoincrement())
+  questionId      Int
+  userId          Int
+  answerText      String?
+  selectedOptions Json?
+  createdAt       DateTime @default(now())
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id         Int               @id @default(autoincrement())
+  userId     Int
+  courseId   Int
+  gradedById Int?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  plagiarism PlagiarismReport?
+  course     Course            @relation(fields: [courseId], references: [id])
+  gradedBy   User?             @relation("SubmissionGrader", fields: [gradedById], references: [id])
+  student    User              @relation("StudentSubmissions", fields: [userId], references: [id])
+}
+
+model PlagiarismReport {
+  id           Int        @id @default(autoincrement())
+  submissionId Int        @unique
+  similarity   Float
+  createdAt    DateTime   @default(now())
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model Certificate {
+  id         Int      @id @default(autoincrement())
+  name       String
+  issuedById Int
+  issuedToId Int
+  createdAt  DateTime @default(now())
+  courseId   Int?
+  Course     Course?  @relation(fields: [courseId], references: [id])
+  issuer     User     @relation("CertificateIssuer", fields: [issuedById], references: [id])
+  recipient  User     @relation("CertificateRecipient", fields: [issuedToId], references: [id])
+}
+
+model CertificateTemplate {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  createdById Int
+  createdAt   DateTime @default(now())
+  createdBy   User     @relation("TemplateCreator", fields: [createdById], references: [id])
+}
+
+model TutorProfile {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique
+  bio       String?
+  expertise String?
+  user      User    @relation(fields: [userId], references: [id])
+}
+
+model TutorApplication {
+  id          Int      @id @default(autoincrement())
+  applicantId Int
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  applicant   User     @relation("TutorApplicationApplicant", fields: [applicantId], references: [id])
+}
+
+model QuizAttempt {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  quizId    Int
+  score     Float?
+  createdAt DateTime @default(now())
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model VideoProgress {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  moduleId  Int
+  progress  Float    @default(0)
+  updatedAt DateTime @updatedAt
+  module    Module   @relation(fields: [moduleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model DocumentProgress {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  moduleId  Int
+  progress  Float    @default(0)
+  updatedAt DateTime @updatedAt
+  module    Module   @relation(fields: [moduleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ReportExport {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  reportUrl String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model GovtSyncLog {
+  id            Int         @id @default(autoincrement())
+  institutionId Int
+  syncStatus    String
+  createdAt     DateTime    @default(now())
+  institution   Institution @relation(fields: [institutionId], references: [id])
+}

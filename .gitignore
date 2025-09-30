@@ -1,0 +1,18 @@
+# Dependencies
+/node_modules
+
+# Environment
+.env
+
+# Prisma generated folder
+/prisma/migrations
+
+# Logs/Debug
+npm-debug.log
+*.log
+
+# Windows temp files
+Thumbs.db
+
+
+
