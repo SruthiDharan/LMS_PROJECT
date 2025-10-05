@@ -46,32 +46,43 @@ model Institution {
 }
 
 model Course {
-  id           Int           @id @default(autoincrement())
-  name         String
-  description  String
-  createdById  Int
-  tutorId      Int?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id          String   @id @default(uuid())
+  title       String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String 
+  tutorId     String? 
+  createdBy   User     @relation("CourseCreator", fields: [createdById], references: [id])
+  tutor       User?    @relation("CourseTutor", fields: [tutorId], references: [id])
+  modules     Module[]
+  enrollments Enrollment[]
   certificates Certificate[]
-  createdBy    User          @relation("CourseCreator", fields: [createdById], references: [id])
-  tutor        User?         @relation("CourseTutor", fields: [tutorId], references: [id])
-  enrollments  Enrollment[]
-  modules      Module[]
-  submissions  Submission[]
+  submissions Submission[]
 }
 
 model Module {
-  id               Int                @id @default(autoincrement())
-  title            String
-  content          String
-  courseId         Int
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  DocumentProgress DocumentProgress[]
-  course           Course             @relation(fields: [courseId], references: [id])
-  quizzes          Quiz[]
-  VideoProgress    VideoProgress[]
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  course      Course   @relation(fields: [courseId], references: [id])
+  courseId    String 
+  lessons     Lesson[]
+  quizzes     Quiz[] 
+  documentProgresses DocumentProgress[]
+  videoProgresses    VideoProgress[]
+  @@unique([courseId, title])
+}
+
+model Lesson {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @default("")
+  order       Int      @default(0)
+  module      Module   @relation(fields: [moduleId], references: [id])
+  moduleId    String
+  @@unique([moduleId, title])
 }
 
 model Enrollment {
